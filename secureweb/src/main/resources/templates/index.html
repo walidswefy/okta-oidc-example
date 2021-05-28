@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html th:lang="${lang}"
+      th:with="lang=${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Home Page</title>
+</head>
+<body>
+<p>
+    Current user is <span th:text="${userInfo.fullName}"></span>
+</p>
+
+<table>
+    <thead>
+    <tr>
+        <th>Claim</th>
+        <th>Value</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="item : ${details}">
+        <td th:text="${item.key}">Key</td>
+        <td th:id="${'claim-' + item.key}" th:text="${item.value}">Value</td>
+    </tr>
+    </tbody>
+</table>
+
+<!--/* If the user is logged in, show the logout button */-->
+<form method="post" th:action="@{/logout}">
+    <input th:name="${_csrf.parameterName}" th:value="${_csrf.token}" type="hidden"/>
+    <button id="logout-button" type="submit">Logout This Application</button>
+</form>
+
+<form action="https://dev-08075771.okta.com/oauth2/default/v1/logout" method="get">
+    <input name="id_token_hint" th:value="${idToken}" type="hidden"/>
+    <input name="post_logout_redirect_uri" th:value="${#request.getRequestURL()}" type="hidden"/>
+    <button id="logout-button-all" type="submit">Single Sign Out</button>
+</form>
+
+
+<!--https://dev-08075771.okta.com/.well-known/openid-configuration-->
+
+</body>
+</html>

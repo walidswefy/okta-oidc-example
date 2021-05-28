@@ -1,0 +1,23 @@
+app.uri: http://localhost:${server.port}
+okta-account-uri: https://dev-08075771.okta.com
+okta-single-sign-out: ${okta-account-uri}/oauth2/default/v1/logout?id_token_hint=%ID_TOKEN%&post_logout_redirect_uri=${app.uri}
+server:
+  port: 8080
+spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          okta:
+            authorization-uri: ${okta-account-uri}/oauth2/default/v1/authorize
+            jwk-set-uri: ${okta-account-uri}/oauth2/default/v1/keys
+            token-uri: ${okta-account-uri}/oauth2/default/v1/token
+            user-info-uri: ${okta-account-uri}/oauth2/default/v1/userinfo
+            user-name-attribute: preferred_username
+        registration:
+          okta:
+            authorization-grant-type: authorization_code
+            client-id: 0oaqu8u2ozXTMJ56s5d6
+            client-secret: c5MOIMBxqjsk0gnkZ3ck30_N-BMKMQOSBI0y6cGs
+            redirect-uri: ${app.uri}/login/oauth2/code/okta
+            scope: openid, profile

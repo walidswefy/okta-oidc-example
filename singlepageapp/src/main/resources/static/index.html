@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--    https://github.com/simplyi/spa-example/tree/a429232b4741f54ea5e34d745e63e8c56c5c1761/src/main/resources/static -->
+    <meta charset="UTF-8">
+    <title>Javascript application with PKCE</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+
+        let oktaDomain = "https://dev-08075771.okta.com";
+        let requestTokenUrl = oktaDomain + "/oauth2/default/v1/token";
+        let authTokenRequestUrl = oktaDomain + "/oauth2/default/v1/authorize";
+
+
+        let clientId = "0oaqv4ht6xfwZsXCn5d6";
+        let callback = "http://localhost:8080/callback.html";
+        let securedServiceUrl = "http://localhost:8081/user";
+
+
+        function generateState(length) {
+            var stateValue = "";
+            var alphaNumericCharacters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            var alphaNumericCharactersLength = alphaNumericCharacters.length;
+            for (var i = 0; i < length; i++) {
+                stateValue += alphaNumericCharacters.charAt(Math.floor(Math.random() * alphaNumericCharactersLength));
+            }
+
+            document.getElementById("stateValue").innerHTML = stateValue;
+        }
+
+        function generateCodeVerifier() {
+            var returnValue = "";
+            var randomByteArray = new Uint8Array(32);
+            window.crypto.getRandomValues(randomByteArray);
+
+            returnValue = base64urlencode(randomByteArray);
+
+            document.getElementById("codeVerifierValue").innerHTML = returnValue;
+        }
+
+        async function generateCodeChallenge() {
+            var codeChallengeValue = "";
+
+            var codeVerifier = document.getElementById("codeVerifierValue").innerHTML;
+
+            var textEncoder = new TextEncoder('US-ASCII');
+            var encodedValue = textEncoder.encode(codeVerifier);
+            var digest = await window.crypto.subtle.digest("SHA-256", encodedValue);
+
+            codeChallengeValue = base64urlencode(Array.from(new Uint8Array(digest)));
+
+            document.getElementById("codeChallengeValue").innerHTML = codeChallengeValue;
+        }
+
+
+        function base64urlencode(sourceValue) {
+            var stringValue = String.fromCharCode.apply(null, sourceValue);
+            var base64Encoded = btoa(stringValue);
+            return base64Encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+
+        function getAuthCode() {
+            var state = document.getElementById("stateValue").innerHTML;
+            var codeChallenge = document.getElementById("codeChallengeValue").innerHTML;
+
+            var authorizationURL = authTokenRequestUrl;
+            authorizationURL += "?client_id=" + clientId;
+            authorizationURL += "&response_type=code";
+            authorizationURL += "&scope=openid";
+            authorizationURL += "&redirect_uri=" + callback;
+            authorizationURL += "&state=" + state;
+            authorizationURL += "&code_challenge=" + codeChallenge;
+            authorizationURL += "&code_challenge_method=S256";
+
+            window.open(authorizationURL, 'authorizationRequestWindow', 'width=800,height=600,left=200,top=200');
+        }
+
+        function postAuthorize(state, authCode) {
+            var originalStateValue = document.getElementById("stateValue").innerHTML;
+
+            if (state === originalStateValue) {
+                requestTokens(authCode);
+            } else {
+                alert("Invalid state value received");
+            }
+        }
+
+        function requestTokens(authCode) {
+            var codeVerifier = document.getElementById("codeVerifierValue").innerHTML;
+            var data = {
+                "grant_type": "authorization_code",
+                "client_id": clientId,
+                "code": authCode,
+                "code_verifier": codeVerifier,
+                "redirect_uri": callback
+            };
+
+            $.ajax({
+                beforeSend: function (request) {
+                    request.setRequestHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8");
+                },
+                type: "POST",
+                url: requestTokenUrl,
+                data: data,
+                success: postRequestAccessToken,
+                dataType: "json"
+            });
+        }
+
+        function postRequestAccessToken(data, status, jqXHR) {
+            document.getElementById("accessToken").innerHTML = data["access_token"];
+        }
+
+        function getInfoFromResourceServer() {
+
+            var accessToken = document.getElementById("accessToken").innerHTML;
+
+            $.ajax({
+                beforeSend: function (request) {
+                    request.setRequestHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8");
+                    request.setRequestHeader("Authorization", "Bearer " + accessToken);
+                },
+                type: "GET",
+                url: securedServiceUrl,
+                success: postInfoFromAccessToken,
+                dataType: "text"
+            });
+        }
+
+        function postInfoFromAccessToken(data, status, jqXHR) {
+            alert(data);
+        }
+
+    </script>
+</head>
+<body>
+<h1>Oauth2-PKCE est Page</h1>
+<div id="stateValue"></div>
+<div><input onclick="generateState(30)" type="button" value="Generate state value"/></div>
+<div id="codeVerifierValue"></div>
+<div><input onclick="generateCodeVerifier()" type="button" value="Generate Code Verifier value"/></div>
+<div id="codeChallengeValue"></div>
+<div><input onclick="generateCodeChallenge()" type="button" value="Generate Code Challenge value"/></div>
+<br/>
+<div><input onclick="getAuthCode()" type="button" value="Get Auth Code"/></div>
+<p>Access token: <span id="accessToken"></span></p>
+<br/>
+<div><input onclick="getInfoFromResourceServer()" type="button" value="Access Resource Server Service"/></div>
+</body>
+</html>
